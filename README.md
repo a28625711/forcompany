@@ -8,6 +8,7 @@ Public Level2Title As String
 Public Content As String
 
 
+
 Sub ExtractTableData()
     Dim ws As Worksheet
     Dim lastRow As Long
