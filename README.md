@@ -1,39 +1,25 @@
-' TableRow Class
-Option Explicit
+import os
 
-Public ID As String
-Public ParentID As String
-Public Level1Title As String
-Public Level2Title As String
-Public Content As String
+def convert_to_crlf(file_path):
+    with open(file_path, 'r', encoding='utf-8', newline='') as file:
+        content = file.read()
+    
+    # 使用 CRLF (\r\n) 替换换行符
+    content_crlf = content.replace('\r\n', '\n').replace('\n', '\r\n')
 
+    with open(file_path, 'w', encoding='utf-8', newline='') as file:
+        file.write(content_crlf)
 
+def convert_directory_to_crlf(directory):
+    for root, _, files in os.walk(directory):
+        for file in files:
+            file_path = os.path.join(root, file)
+            try:
+                convert_to_crlf(file_path)
+                print(f"Converted: {file_path}")
+            except Exception as e:
+                print(f"Error converting {file_path}: {e}")
 
-Sub ExtractTableData()
-    Dim ws As Worksheet
-    Dim lastRow As Long
-    Dim i As Long
-    Dim tableRow As TableRow
-    Dim rowsCollection As Collection
-
-    Set ws = ThisWorkbook.Sheets("Sheet1")
-    lastRow = ws.Cells(ws.Rows.Count, 1).End(xlUp).Row
-    Set rowsCollection = New Collection
-
-    For i = 2 To lastRow
-        Set tableRow = New TableRow
-        With ws
-            tableRow.ID = .Cells(i, 1).Value
-            tableRow.ParentID = .Cells(i, 2).Value
-            tableRow.Level1Title = .Cells(i, 3).Value
-            tableRow.Level2Title = .Cells(i, 4).Value
-            tableRow.Content = .Cells(i, 5).Value
-        End With
-        
-        rowsCollection.Add tableRow
-    Next i
-
-    For Each tableRow In rowsCollection
-        Debug.Print tableRow.ID, tableRow.ParentID, tableRow.Level1Title, tableRow.Level2Title, tableRow.Content
-    Next tableRow
-End Sub
+if __name__ == "__main__":
+    target_directory = input("Enter the directory path: ")
+    convert_directory_to_crlf(target_directory)
