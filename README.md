@@ -1,25 +1,55 @@
-import os
+use strict;
+use warnings;
+use File::Find;
+use File::Spec;
 
-def convert_to_crlf(file_path):
-    with open(file_path, 'r', encoding='utf-8', newline='') as file:
-        content = file.read()
-    
-    # 使用 CRLF (\r\n) 替换换行符
-    content_crlf = content.replace('\r\n', '\n').replace('\n', '\r\n')
+# Get command line arguments: base directory, directory output file, and file list output file
+my ($base_dir, $dir_output, $file_output) = @ARGV;
 
-    with open(file_path, 'w', encoding='utf-8', newline='') as file:
-        file.write(content_crlf)
+# Validate input arguments
+die "Usage: $0 <base_directory> <dir_output_file> <file_output_file>\n" 
+  unless defined $base_dir && defined $dir_output && defined $file_output;
+die "Base directory '$base_dir' does not exist or is not a directory\n" 
+  unless -d $base_dir;
 
-def convert_directory_to_crlf(directory):
-    for root, _, files in os.walk(directory):
-        for file in files:
-            file_path = os.path.join(root, file)
-            try:
-                convert_to_crlf(file_path)
-                print(f"Converted: {file_path}")
-            except Exception as e:
-                print(f"Error converting {file_path}: {e}")
+my %dirs;     # Hash to store unique directory paths
+my @files;    # Array to store all .c file paths
 
-if __name__ == "__main__":
-    target_directory = input("Enter the directory path: ")
-    convert_directory_to_crlf(target_directory)
+# Traverse the base directory to find all .c files
+find({
+    wanted => sub {
+        if (-f $_ && $_ =~ /\.c$/i) {  # Check .c files (case-insensitive)
+            # 1. Process directories
+            my $abs_dir = $File::Find::dir;
+            my $rel_dir = File::Spec->abs2rel($abs_dir, $base_dir);
+            $rel_dir =~ s[/][\\]g;  # Convert to Windows-style path
+            $dirs{$rel_dir} = 1;
+
+            # 2. Process files
+            my $abs_file = $File::Find::name;
+            my $rel_file = File::Spec->abs2rel($abs_file, $base_dir);
+            $rel_file =~ s[/][\\]g;  # Convert to Windows-style path
+            push @files, $rel_file;
+        }
+    },
+    no_chdir => 1  # Maintain accurate path tracking
+}, $base_dir);
+
+# Write directory paths
+open(my $dir_fh, '>', $dir_output) 
+  or die "Cannot open directory output file '$dir_output': $!";
+foreach my $dir (sort keys %dirs) {
+    my $full_dir = $dir eq '' ? '..\\..\\..\\' : "..\\..\\..\\$dir";
+    print $dir_fh "$full_dir\n";
+}
+close($dir_fh);
+
+# Write file paths
+open(my $file_fh, '>', $file_output) 
+  or die "Cannot open file list output '$file_output': $!";
+print $file_fh "$_\n" for sort @files;
+close($file_fh);
+
+print "Operation completed.\n";
+print "- Directory paths written to $dir_output\n";
+print "- File list written to $file_output\n";
